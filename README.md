@@ -4,7 +4,7 @@ This program lets you play a simulation of Tic-Tac-Toe. Is program with validati
 
 Purpose: To learn the new advance language of MIPS and to discover what you can build with it.
 
-How to Run: Download MARS (An IDE for the mips language. http://courses.missouristate.edu/kenvollmar/mars/download.htm ) then download the file. Open the game within MARS, compile then run. You now can play a game of Tic-Tac-Toe with anyone.
+How to Run: Download MARS (An IDE for the mips language. http://courses.missouristate.edu/kenvollmar/mars/download.htm ). Open MARS and create a new file. Copy and paste the given code and the compile and run. You now can play a game of Tic-Tac-Toe with anyone.
 
 Unit Width in Pixels : 1
 
