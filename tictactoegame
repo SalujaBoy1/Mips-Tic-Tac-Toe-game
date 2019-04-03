@@ -1,0 +1,726 @@
+.data			
+board:	        .word line1, line2, line3 # making of the board. establishing a 3 x 3 board
+line1:		.word '#', '#', '#' # row 1 of board
+line2:		.word '#', '#', '#' # row 2 of board
+line3:		.word '#', '#', '#' # row 3 of board
+
+
+size:		.word 3
+.eqv		DATA_SIZE 4
+
+
+instructions:	.asciiz "This is a game of tic-tac-toe. Get 3 in a row to win. Here are the rules to play. \n"
+rule1:		.asciiz "1. To place your piece on the board, you need to enter the row number, press enter , then enter the column number. \n"
+rule2:  	.asciiz "2. The rows and coloms start from 0 and end at 2. Please enter number from 0-2 only, otherwise you will get an error. \n"
+rule3:  	.asciiz "3. If a slot on the board is taken, then you will need to re-enter your move. \n"
+
+nextLine: .asciiz "\n"
+space: .asciiz " | "
+underscore: .asciiz "--+---+--\n"
+player1Move: .asciiz "Player 1, your move: \nX-Coordinate: "
+player2Move: .asciiz "Player 2, your move: \nX-Coordinate: "
+YCoor:	      .asciiz "Y-Coordinate: "
+Bum1:	      .asciiz "BUM\n"
+Bum2:	      .asciiz "BUM...\n"
+
+	
+
+congratsPlayer1: .asciiz "Player 1 wins!!"
+congratsPlayer2: .asciiz "Player 2 wins!!"
+messageTie:    .asciiz "Tie Game! Both of you guys lost!"
+
+
+	.align 2
+input:	.space 4		# user input
+
+	.text			
+	.globl	main		# making main global so that way i can call it anywhere
+
+main:
+	#start game and have an exit as a back up
+	j gamePlay
+	j exit
+
+gamePlay:
+	 # print instructions
+ 	 la $a0, instructions
+ 	 li $v0, 4
+	 syscall
+	 #print rule 1		
+	 la $a0, rule1
+	 li $v0, 4
+	 syscall
+	 #print rule 2
+	 la $a0, rule2
+	 li $v0, 4
+	 syscall
+	 #print rule 3
+	 la $a0, rule3
+	 li $v0, 4
+	 syscall
+
+	 # allows the players to make their move. 5 moves for player 1(X's) because they are first and 4 moves for player 2(Y's)
+	 jal boardDesign 	#player 1 and 2's first move
+	 jal XplayerMove
+	 jal boardDesign
+	 jal YplayerMove
+
+	 jal boardDesign 	#player 1 and 2's second move
+	 jal XplayerMove
+	 jal boardDesign
+	 jal YplayerMove
+
+	 jal boardDesign 	#player 1 and 2's third move
+	 jal XplayerMove
+	 jal boardDesign
+	 jal YplayerMove
+
+	 jal boardDesign 	#player 1 and 2's fourth move
+	 jal XplayerMove
+	 jal boardDesign
+	 jal YplayerMove
+
+	 jal boardDesign 	#player 1's last move
+	 jal XplayerMove
+	 jal tieGame # after all moves have finished and game has not detected a winner, the game will end in a tie
+
+	 j exit
+
+tieGame:
+
+	# call board method to show the tie
+	jal boardDesign
+
+	# print the tie game speech
+	la $a0, messageTie
+	li $v0, 4
+	syscall
+
+	j exit		# end program
+
+XplayerMove:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+
+	# let player 1 know it is his move
+	la $a0, player1Move
+	li $v0, 4
+	syscall
+
+	# get input of x and y coordinate
+	# input will be and integer representing coordinates
+	#this will ask for user input for secific coordinates
+	#input
+	li	$v0, 5		 
+	syscall			
+	move $a1, $v0
+	#ask for y coordinate
+	la $a0, YCoor
+	li $v0, 4
+	syscall
+	#input
+	li	$v0, 5		
+	syscall			
+	move $a2, $v0
+
+	jal Xpiece
+
+	beq $v0, -1, XplayerMove #if piece is taken or coordinates are in valid, the user will be prompted to re-enter coordinates
+	jal SoundKeyD
+
+	lw $ra, 0($sp)		#read what was stored in stack back up
+	addi $sp, $sp, 4
+
+	jr $ra
+
+YplayerMove:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+
+	# let player 2 know it is their turn
+	la $a0, player2Move
+	li $v0, 4
+	syscall
+
+	# get input via coordinates(x and y)
+	# read x coordinate
+	li	$v0, 5		
+	syscall			
+	move $a1, $v0
+	
+	#ask for y coordnate
+	la $a0, YCoor
+	li $v0, 4
+	syscall
+	
+	#read y coordinate
+	li	$v0, 5		
+	syscall			
+	move $a2, $v0
+
+	jal yPiece
+
+	beq $v0, -1, YplayerMove #if piece is taken or coordinates are in valid, the user will be prompted to re-enter coordinates
+	jal SoundKeyD
+
+	lw $ra, 0($sp)		#read what was stored in stack back up
+	addi $sp, $sp, 4
+
+	jr $ra
+
+
+initialize:
+	la $v0, board
+	jr	$ra
+	
+boardDesign:
+	addi $sp, $sp, -8	# push ra onto stack(8 means 2 minus extra soaces) 
+	sw $ra, 0($sp)	#storing $ra to $sp
+	sw $a0, 4($sp)	#moves to the next 4 bytes to store more info
+
+	addi $t1, $zero, 0	# $t1 is i; i = 0
+	la $t2, board		# t2 = board
+
+	# print [0][0]
+	lw $t1, 0($t2)
+	lw $t3, 0($t1)
+
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [0][1]
+	lw $t3, 4($t1)
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [0][2]
+	lw $t3, 8($t1)
+	move $a0, $t3
+	li $v0, 11
+	syscall
+	
+	# print new line
+	la $a0, nextLine
+	li $v0, 4
+	syscall
+	
+	
+	la $a0, underscore
+	li $v0, 4
+	syscall
+
+	# print [1][0]
+	lw $t1, 4($t2)
+	lw $t3, 0($t1)
+
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [1][1]
+	lw $t1, 4($t2)
+	lw $t3, 4($t1)
+
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [1][2]
+	lw $t1, 4($t2)
+	lw $t3, 8($t1)
+
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print new line
+	la $a0, nextLine
+	li $v0, 4
+	syscall
+	
+	la $a0, underscore
+	li $v0, 4
+	syscall
+
+	# print [2][0]
+	lw $t1, 8($t2)
+	lw $t3, 0($t1)
+
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [2][1]
+	lw $t3, 4($t1)
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print space
+	la $a0, space
+	li $v0, 4
+	syscall
+
+	# print [2][2]
+	lw $t3, 8($t1)
+	move $a0, $t3
+	li $v0, 11
+	syscall
+
+	# print new line
+	la $a0, nextLine
+	li $v0, 4
+	syscall
+	# print new line
+	la $a0, nextLine
+	li $v0, 4
+	syscall
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	addi $sp, $sp, 8	# pop from stack
+
+	jr $ra
+
+# play_X(g, x, y) - changes g[x][y] = 1, returns 0 on success, -1 on error, and 1 if player 1 wins
+Xpiece:
+
+	li $t4, '#'		#tells program to keep track of hashtags
+	addi $sp, $sp, -16	# push args onto stack
+	sw $ra, 0($sp)
+	sw $a0, 4($sp)
+	sw $a1, 8($sp)
+	sw $a2, 12($sp)
+
+	la $t0, board         # put address of list into $t0
+	sll $t1, $a1, 2		# t1 = i*4
+	add $t1, $t1, $t0	#t1 = (i*4) + rowAddress
+	lw $t2, 0($t1)	# t2 = base address of the row
+
+	sll $t1, $a2, 2		# t1 = y*4
+	add $s0, $t1, $t2	# s0 = (y*4) + colAddress
+	lw $t2, 0($s0)		# t2 now has the item at g[x][y]
+
+	bne $t2, $t4, InvalidMove	# if cell != 0, invalid move
+	addi $t3, $zero, 'X'	# a valid move, so change g[x][y] = X
+	sw $t3, 0($s0)
+
+	# check for winner with win(x,y)
+	move $a0, $a1
+	move $a1, $a2
+	jal win
+	beq $v0, 1, player1Win
+
+	addi $v0, $zero, 0	# return 0 to signal valid non-winning move
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	lw $a1, 8($sp)
+	lw $a2, 12($sp)
+
+	addi $sp, $sp, 16	# pop ra from stack
+
+	jr $ra
+
+player1Win:
+
+	# draw board
+	jal boardDesign
+
+	# print player 1 wins
+	la $a0, congratsPlayer1
+	li $v0, 4
+	syscall
+
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	lw $a1, 8($sp)
+	lw $a2, 12($sp)
+
+	addi $sp, $sp, 16	# pop ra from stack
+
+	j exit		# game over
+
+
+
+# yPiece(g, x, y) - changes g[x][y] = 1, returns 0 on success, -1 on error, and 1 if player 1 wins
+yPiece:
+
+	li $t4, '#'
+	addi $sp, $sp, -16	# push args onto stack
+	sw $ra, 0($sp)
+	sw $a0, 4($sp)
+	sw $a1, 8($sp)
+	sw $a2, 12($sp)
+
+	la $t0, board         # put address of list into $t0
+	sll $t1, $a1, 2		# t1 = i*4
+	add $t1, $t1, $t0	#t1 = (i*4) + rowAddr
+	lw $t2, 0($t1)	# t2 = base address of the row
+
+	sll $t1, $a2, 2		# t1 = y*4
+	add $s0, $t1, $t2	# s0 = (y*4) + colAddr
+	lw $t2, 0($s0)		# t2 now has the item at g[x][y]
+
+	bne $t2, $t4, InvalidMove	# if cell != 0, invalid move
+	addi $t3, $zero, 'O'	# a valid move, so change g[x][y] = 2
+	sw $t3, 0($s0)
+
+	# check for winner with win(x,y)
+	move $a0, $a1
+	move $a1, $a2
+	jal win
+	beq $v0, 1, player2Win
+
+	addi $v0, $zero, 0	# return 0 to signal valid move
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	lw $a1, 8($sp)
+	lw $a2, 12($sp)
+
+	addi $sp, $sp, 16	# pop ra from stack
+
+	jr $ra
+
+
+player2Win:
+
+	# draw board
+	jal boardDesign
+
+	# print player 1 wins
+	la $a0, congratsPlayer2
+	li $v0, 4
+	syscall
+
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	lw $a1, 8($sp)
+	lw $a2, 12($sp)
+
+	addi $sp, $sp, 16	# pop ra from stack
+
+	j exit		# game over
+
+InvalidMove:
+	addi $v0, $zero, -1	# return -1 to signal invalid move
+
+	lw $ra, 0($sp)
+	lw $a0, 4($sp)
+	lw $a1, 8($sp)
+	lw $a2, 12($sp)
+
+	addi $sp, $sp, 16	# pop ra from stack
+
+	jr $ra
+
+# win check if a move creates a win
+# returns 1 if win is found, 0 if not found
+win:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+
+	jal winRow0
+	jal winRow1
+	jal winRow2
+	jal winCol0
+	jal winCol1
+	jal winCol2
+	jal winDiag0
+	jal winDiag1
+
+
+	addi $v0, $zero, 0	# return 0 - which means no winner
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4	# pop from stack
+
+	jr $ra
+
+
+
+winRow0:
+			
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 0($t1)		# t3 = board[0][0]
+	lw $t4, 4($t1)		# t3 = board[0][1]
+	lw $t5, 8($t1)		# t3 = board[0][2]
+	beq $t3, '#', Failing   #if hastags are not their return 0 for win otherwise go to victory royale
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+Failing:
+	addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winRow1:
+	# g[1][X]
+
+	la $t2, board		# t2 = board
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t3, 0($t1)		# t3 = board[1][0]
+	lw $t4, 4($t1)		# t3 = board[1][1]
+	lw $t5, 8($t1)		# t3 = board[1][2]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winRow2:
+	# g[2][X]
+
+	la $t2, board		# t2 = board
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t3, 0($t1)		# t3 = board[2][0]
+	lw $t4, 4($t1)		# t3 = board[2][1]
+	lw $t5, 8($t1)		# t3 = board[2][2]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+	
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winCol0:
+	# g[X][0]
+
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 0($t1)		# t3 = board[0][0]
+
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t4, 0($t1)		# t3 = board[1][0]
+
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t5, 0($t1)		# t3 = board[2][0]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winCol1:
+	# g[X][1]
+
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 4($t1)		# t3 = board[0][1]
+
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t4, 4($t1)		# t3 = board[1][1]
+
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t5, 4($t1)		# t3 = board[2][1]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winCol2:
+	# g[X][2]
+
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 8($t1)		# t3 = board[0][2]
+
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t4, 8($t1)		# t3 = board[1][2]
+
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t5, 8($t1)		# t3 = board[2][2]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winDiag0:
+
+
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 0($t1)		# t3 = board[0][0]
+
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t4, 4($t1)		# t3 = board[1][1]
+
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t5, 8($t1)		# t3 = board[2][2]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+winDiag1:
+
+
+	la $t2, board		# t2 = board
+	lw $t1, 0($t2)		# t1 = board[0]
+	lw $t3, 8($t1)		# t3 = board[0][2]
+
+	lw $t1, 4($t2)		# t1 = board[1]
+	lw $t4, 4($t1)		# t3 = board[1][1]
+
+	lw $t1, 8($t2)		# t1 = board[2]
+	lw $t5, 0($t1)		# t3 = board[2][0]
+	beq $t3, '#', Failing 
+	beq $t4, '#', Failing
+	beq $t5, '#', Failing
+
+	and $t6, $t3, $t4	# and the cells, if they are the same we should get X or Y
+	and $t6, $t6, $t5
+	beq $t6, 88, victoryRoyale	# if winner found, return 1
+	beq $t6, 79, victoryRoyale
+
+	#addi $v0, $zero, 0	# return 0 - no winner in this row
+
+	jr $ra
+
+victoryRoyale:
+	
+	
+	jal SoundKeyA
+	jal SoundKeyAPause
+	jal SoundKeyA
+	jal SoundKeyAPause
+	
+	#print Bum sound effect		
+	 la $a0, Bum1
+	 li $v0, 4
+	 syscall
+	
+	#print sound effect	
+	 la $a0, Bum2
+	 li $v0, 4
+	 syscall
+	 
+	 #print Bum sound effect		
+	 la $a0, Bum1
+	 li $v0, 4
+	 syscall
+	
+	#print sound effect	
+	 la $a0, Bum2
+	 li $v0, 4
+	 syscall
+	 
+	addi $v0, $zero, 1	# return 1
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4	# pop from stack
+
+	jr $ra
+	
+	
+SoundKeyD:
+	li $v0, 31 # no pause sound
+	li $a0, 62 # pitch
+	li $a1, 2000 #duration of sound
+	li $a2, 113 #percussion
+	li $a3, 127 #volume- max
+	syscall
+	
+	jr $ra
+	
+SoundKeyA:
+	li $v0, 31 # no pause sound
+	li $a0, 69 #pitch
+	li $a1, 1000 #duration
+	li $a2, 0	#piano
+	li $a3, 127 #volme - max
+	syscall
+	
+	jr $ra
+	
+SoundKeyAPause:
+	li $v0, 33 #rest pause after sound
+	li $a0, 69 #pitch
+	li $a1, 2000 #duration
+	li $a2, 0 #piano
+	li $a3, 127 #volume-max
+	syscall
+	
+	jr $ra
+	
+exit:
+	li $v0, 10
+	syscall
